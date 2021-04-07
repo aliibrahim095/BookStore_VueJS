@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>book store</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title></title>
+    <link href="css/bootstrap.css" rel="stylesheet" />
+    <link href="css/font-awesome.css" rel="stylesheet" />
+    <script src="js/vue.js"></script>
+    <script src="books.js"></script>
+    <style>
+        a{
+            text-decoration: none;
+        }
+        body{
+            margin-top:10px;
+        }
+        .more{
+            color: #005cbf;
+            font-weight: bold;
+        }
+        .less{
+            color: green;
+            font-weight: bold;
+        }
+        .zero{
+            color: red;
+            font-weight: bold;
+        }
+        .card{
+            background: -webkit-linear-gradient(top,white 70%,lightgray);
+            box-shadow: 2px 2px 2px lightgray;
+        }
+        .card:hover{
+            background: -webkit-linear-gradient(top,gray -70%,white);
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+<div class="container" id="maindiv">
+    <div class="row ml-5 mr-5 p-4 bg-dark d-flex justify-content-between"  id="header">
+        <a @click="iscartvisible=false" class="" style="color: greenyellow" href="#">View All Products</a>
+        <div class="d-flex">
+            <p class="text-light"><span v-text="cart.items.length"></span> <template v-if="cart.items.length==0||cart.items.length>1">Items</template><template v-if="cart.items.length==1">Item</template> total price <span>{{gettotalprice}}</span>
+            </p>
+            <a @click="iscartvisible=true" class="ml-1" style="color: greenyellow" href="#">Show Cart</a>
+        </div>
+    </div>
+    <div id="content" v-if="iscartvisible==false">
+        <div class="row justify-content-center">
+            <div class="card bg-light" style="width: 20rem;margin: 0.2rem" v-for="book in books">
+                <div class="card-body">
+                    <img class="card-img-top" :src="book.image" :title="book.title"/>
+                    <h4 class="card-title" class="text-center">{{book.title}}</h4>
+                    <p class="card-text">{{book.subtitle}}</p>
+                </div>
+                <div class="card-footer d-flex justify-content-between align-items-baseline">
+                    <p :class="[book.instock > 5 ? 'more':'',book.instock <= 5 ? 'less':'',book.instock == 0 ? 'zero':'']" >instock {{book.instock}}</p>
+                    <button :disabled="book.instock==0" class="btn btn-primary" @click="addtolist(book)">Add To Cart</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <pre>
+
+    </pre>
+
+    <div v-if="iscartvisible==true" class="row">
+        <div v-if="cart.items.length==0" class="alert alert-danger text-center m-auto w-75 p-4">Sorry Your cart is empty, Add product and data will be shown here </div>
+    </div>
+
+    <div class="row ml-5 mr-5">
+          <table class="table table-bordered table-striped" v-if="cart.items.length > 0">
+        <thead>
+        <tr>
+            <th scope="col">#</th>
+            <th scope="col">title</th>
+            <th scope="col">author</th>
+            <th scope="col">pages</th>
+            <th scope="col">category</th>
+            <th scope="col">subtitle</th>
+            <th scope="col">quantity</th>
+            <th scope="col">isbn</th>
+            <th scope="col">unit-price</th>
+            <th scope="col">total-price</th>
+            <th scope="col">update</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr v-for="(item, index) in cart.items" :key="item.index">
+            <th scope="col">{{index+1}}</th>
+            <th scope="col">{{item.book.title}}</th>
+            <th scope="col">{{item.book.author}}</th>
+            <th scope="col">{{item.book.pages}}</th>
+            <th scope="col">{{item.book.category}}</th>
+            <th scope="col">{{item.book.subtitle}}</th>
+            <th scope="col">{{item.quantity}}</th>
+            <th scope="col">{{item.book.isbn}}</th>
+            <th scope="col">{{currencyFormat(item.book.price)}}</th>
+            <th scope="col">{{currencyFormat(item.book.price*item.quantity)}}</th>
+            <th scope="col">
+                <button :disabled="item.book.instock==0" class="btn btn-success mb-1" @click="increase(item)">+</button>
+                <button class="btn btn-danger" @click="decrease(item)">-</button>
+            </th>
+        </tr>
+        <tr>
+            <th colspan="4">
+                Total
+            </th>
+            <th colspan="2">
+                {{currencyFormat(gettotalprice)}}
+            </th>
+        </tr>
+        <th colspan="4">
+            Taxes
+        </th>
+        <th colspan="2">
+            {{currencyFormat(gettotalprice * 0.1)}}
+        </th>
+        </tr>
+        <th colspan="4">
+            Final Total Price
+        </th>
+        <th colspan="2">
+            {{currencyFormat(gettotalprice*0.1 + gettotalprice)}}
+        </th>
+        </tr>
+        </tbody>
+    </table>
+    </div>
+</div>
+
+<script src="js/jquery-3.min.js"></script>
+<!--<script src="js/popper.js"></script>-->
+<script src="js/bootstrap.js"></script>
+<!--this is the vue script logic-->
+<script>
+    const app =  Vue.createApp({
+        data:()=>( {
+            books:books,
+            isoutofstock:false,
+            iscartvisible:false,
+            cart:{
+                items:[]
+            }
+
+        }),
+        methods:{
+            addtolist(book){
+                // let index=this.getIndex(book);
+                if(!this.checkexistence(book)){
+                    this.cart.items.push({
+                        book: book,
+                        quantity: 1
+                    });
+                }else{
+                    let targetitem;
+                    for (let i = 0; i < this.cart.items.length; i++) {
+                        if(this.cart.items[i].book.isbn == book.isbn){
+                            targetitem= this.cart.items[i];
+                            break;
+                        }
+                    }
+                    targetitem.quantity++;
+
+                }
+                if (book.instock==0){
+                    this.isoutofstock= true;
+                }
+                else {
+                    this.isoutofstock=false;
+                    book.instock--;
+                }
+            },
+            getIndex(book){
+                    for (let i =0; i <this.cart.items.length;i++){
+                        if (this.cart.items.book[i].isbn==book.isbn){
+                            return i;
+                            break;
+                        }
+                    }
+            },
+            checkexistence(book){
+                for (let i = 0; i < this.cart.items.length; i++) {
+                    if(this.cart.items[i].book.isbn == book.isbn){
+                        return true;
+                    }
+
+                }
+            },
+            currencyFormat(val){
+                let formatter = Intl.NumberFormat("ar-SA", {
+                    style: "currency",
+                    currency: "SAR",
+                    minimumFractionDigits: 0
+                })
+                return formatter.format(val);
+            },
+            increase(item){
+                item.quantity++;
+                item.book.instock --;
+            },
+            decrease(item){
+                item.quantity--;
+                item.book.instock ++;
+
+                if(item.quantity == 0){
+                    let ind;
+                    for (let i = 0; i < this.cart.items.length; i++) {
+
+                        if(this.cart.items[i].book.isbn == item.book.isbn){
+                            ind = i;
+                            break;
+                        }
+                    }
+                    this.cart.items.splice(ind, 1)
+                }
+            }
+        },
+        computed: {
+            gettotalprice(){
+                let result=0;
+                for (let i=0;i<this.cart.items.length;i++){
+                    result+=this.cart.items[i].book.price*this.cart.items[i].quantity;
+                    return result;
+                }
+            }
+        }
+    })
+    app.mount('#maindiv')
+</script>
+<!--end this is the vue script logic-->
+
+</body>
+</html>
